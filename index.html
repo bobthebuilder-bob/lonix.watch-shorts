@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lonix Watch - Shorts & Premium</title>
+    <style>
+        :root {
+            --accent: #00f2ea;
+            --premium-red: #ff0050;
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        
+        body, html { 
+            background: #000; 
+            height: 100%; width: 100%; 
+            overflow: hidden; color: #fff;
+        }
+
+        /* --- LANDING PAGE --- */
+        #landing {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.6s cubic-bezier(0.8, 0, 0.2, 1);
+        }
+
+        .logo-container { text-align: center; margin-bottom: 40px; }
+        .logo {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        .premium-text {
+            font-size: 0.7rem;
+            letter-spacing: 4px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-top: 8px;
+        }
+
+        .start-btn {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 16px 48px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .lang-nav { margin-top: 24px; display: flex; gap: 12px; }
+        .lang-btn {
+            background: transparent;
+            color: #555;
+            border: 1px solid #222;
+            padding: 8px 16px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+        .lang-btn.active { color: #fff; border-color: #444; }
+
+        /* --- APP FEED --- */
+        #app {
+            height: 100%; width: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scrollbar-width: none;
+            display: none;
+        }
+        #app::-webkit-scrollbar { display: none; }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%; height: 100vh;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            background: #000;
+        }
+
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* --- UI OVERLAYS --- */
+        .sidebar {
+            position: absolute;
+            right: 12px; bottom: 140px;
+            display: flex; flex-direction: column;
+            gap: 25px;
+        }
+
+        .icon-svg {
+            width: 28px; height: 28px;
+            fill: #fff;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+        }
+
+        .info-box {
+            position: absolute;
+            left: 16px; bottom: 40px;
+            width: calc(100% - 80px);
+        }
+
+        .user-tag { font-weight: 700; font-size: 1rem; margin-bottom: 6px; display: block; }
+        .video-title { font-size: 0.95rem; font-weight: 400; color: #eee; margin-bottom: 15px; }
+
+        .desc-btn {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 8px 16px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+        }
+
+        .desc-content {
+            display: none;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 16px; margin-top: 12px;
+            font-size: 0.85rem; line-height: 1.5;
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="landing">
+        <div class="logo-container">
+            <h1 class="logo">Lonix Watch</h1>
+            <p class="premium-text">Shorts & Premium</p>
+        </div>
+        <button class="start-btn" id="startBtn">Start Watching</button>
+        <div class="lang-nav">
+            <button class="lang-btn active" onclick="changeLang('sv', this)">Svenska</button>
+            <button class="lang-btn" onclick="changeLang('en', this)">English</button>
+        </div>
+    </div>
+
+    <div id="app">
+        <div id="feed"></div>
+    </div>
+
+    <script>
+        /* --- DIN VIDEODATABAS (FILNAMN) --- */
+        const myVideos = [
+            {
+                file: "video1.mp4", 
+                user: "@lonix_premium",
+                title: { sv: "Välkommen till Lonix", en: "Welcome to Lonix" },
+                desc: { sv: "Detta är din första premium-video.", en: "This is your first premium video." }
+            },
+            {
+                file: "video2.mp4", 
+                user: "@lonix_watch",
+                title: { sv: "Modern Minimalism", en: "Modern Minimalism" },
+                desc: { sv: "Rent gränssnitt utan emojis.", en: "Clean interface without emojis." }
+            },
+            {
+                file: "video3.mp4", 
+                user: "@premium_shorts",
+                title: { sv: "Oändlig upplevelse", en: "Infinite Experience" },
+                desc: { sv: "Scrolla en gång till för att börja om.", en: "Scroll one more time to start over." }
+            }
+        ];
+
+        let currentLang = 'sv';
+        const app = document.getElementById('app');
+
+        const icons = {
+            like: `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`,
+            msg: `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+            share: `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>`
+        };
+
+        function renderFeed() {
+            const feed = document.getElementById('feed');
+            // Vi lägger till den första videon igen längst ner för att skapa loop-effekten
+            const loopVideos = [...myVideos, myVideos[0]];
+            
+            feed.innerHTML = loopVideos.map((v, i) => `
+                <div class="video-wrapper" data-index="${i}">
+                    <video loop playsinline src="${v.file}"></video>
+                    <div class="sidebar">
+                        <div class="icon-box">${icons.like}</div>
+                        <div class="icon-box">${icons.msg}</div>
+                        <div class="icon-box">${icons.share}</div>
+                    </div>
+                    <div class="info-box">
+                        <span class="user-tag">${v.user}</span>
+                        <div class="video-title">${v.title[currentLang]}</div>
+                        <button class="desc-btn" onclick="toggleDesc(this)">${currentLang === 'sv' ? 'Beskrivning' : 'Description'}</button>
+                        <div class="desc-content">${v.desc[currentLang]}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.changeLang = (lang, btn) => {
+            currentLang = lang;
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderFeed();
+        };
+
+        document.getElementById('startBtn').onclick = () => {
+            document.getElementById('landing').style.transform = 'translateY(-100%)';
+            document.getElementById('app').style.display = 'block';
+            setTimeout(handlePlayback, 100);
+        };
+
+        window.toggleDesc = (btn) => {
+            const content = btn.nextElementSibling;
+            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+        };
+
+        function handlePlayback() {
+            const wrappers = document.querySelectorAll('.video-wrapper');
+            const scrollTop = app.scrollTop;
+            const windowHeight = window.innerHeight;
+            
+            // Kolla om vi har scrollat till den "extra" första videon längst ner
+            if (scrollTop >= (wrappers.length - 1) * windowHeight) {
+                app.scrollTo({ top: 0, behavior: 'instant' });
+                return;
+            }
+
+            wrappers.forEach(w => {
+                const video = w.querySelector('video');
+                const rect = w.getBoundingClientRect();
+                if (rect.top >= -windowHeight/2 && rect.top <= windowHeight/2) {
+                    video.play().catch(() => {});
+                } else {
+                    video.pause();
+                    video.currentTime = 0;
+                }
+            });
+        }
+
+        app.onscroll = handlePlayback;
+        renderFeed();
+    </script>
+</body>
+</html>
